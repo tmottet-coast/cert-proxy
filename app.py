@@ -17,8 +17,12 @@ def proxy():
         response = requests.post(
             "https://s2s.thomsonreuters.com/api",
             json=data,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
             cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-            verify="/etc/secrets/ca.pem"  # or False for testing
+            verify=True  # Use system certs
         )
         return jsonify({
             "status_code": response.status_code,
