@@ -15,10 +15,10 @@ def proxy():
 
     try:
         response = requests.post(
-            "https://s2s.thomsonreuters.com/api/",  # Replace with your target API
+            "https://secure-api.example.com/endpoint",
             json=data,
-            cert=("/var/render/secrets/client.crt", "/var/render/secrets/client.key"),
-            verify="/var/render/secrets/ca.pem"  # Or set to False for dev/testing only
+            cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
+            verify="/etc/secrets/ca.pem"  # or False for testing
         )
         return jsonify({
             "status_code": response.status_code,
