@@ -15,7 +15,7 @@ def proxy():
 
     try:
         response = requests.post(
-            "https://secure-api.example.com/endpoint",
+            "https://s2s.thomsonreuters.com/api/",
             json=data,
             cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
             verify="/etc/secrets/ca.pem"  # or False for testing
