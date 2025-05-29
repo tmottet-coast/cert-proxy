@@ -1,21 +1,26 @@
 from flask import Flask, request, jsonify
 import requests
 from requests.auth import HTTPBasicAuth
+import os
 
 app = Flask(__name__)
 
-API_KEY = "8923joijsdf789873k877"
+# Load secrets from environment variables
+API_KEY = os.getenv("PROXY_API_KEY")
+BASIC_AUTH_USER = os.getenv("BASIC_AUTH_USER")
+BASIC_AUTH_PASS = os.getenv("BASIC_AUTH_PASS")
 BASE_API_URL = "https://s2s.thomsonreuters.com/api"
-
-BASIC_AUTH_USER = "4481485"
-BASIC_AUTH_PASS = "YMFMH5"
 
 @app.route('/proxy/<path:subpath>', methods=['POST'])
 def proxy(subpath):
+    # Validate API key
     if request.headers.get("x-api-key") != API_KEY:
         return jsonify({"error": "Unauthorized"}), 403
 
+    # Read raw XML body
     xml_payload = request.data
+
+    # Build full target API URL
     full_url = f"{BASE_API_URL}/{subpath}"
 
     try:
@@ -28,7 +33,7 @@ def proxy(subpath):
             },
             auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
             cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-            verify=True  # Or False for testing only
+            verify=True  # Or False for testing
         )
 
         return jsonify({
