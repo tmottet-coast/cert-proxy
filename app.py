@@ -5,7 +5,7 @@ import os
 
 app = Flask(__name__)
 
-# Load secrets from environment variables
+# Load credentials and API key securely from environment
 API_KEY = os.getenv("PROXY_API_KEY")
 BASIC_AUTH_USER = os.getenv("BASIC_AUTH_USER")
 BASIC_AUTH_PASS = os.getenv("BASIC_AUTH_PASS")
@@ -13,14 +13,17 @@ BASE_API_URL = "https://s2s.thomsonreuters.com/api"
 
 @app.route('/proxy/<path:subpath>', methods=['POST'])
 def proxy(subpath):
-    # Validate API key
+    # Validate proxy API key
     if request.headers.get("x-api-key") != API_KEY:
         return jsonify({"error": "Unauthorized"}), 403
 
-    # Read raw XML body
-    xml_payload = request.data
+    # Read and clean the raw XML
+    xml_payload = request.data.strip()
 
-    # Build full target API URL
+    # Log raw payload for debugging
+    print("Received XML:\n", xml_payload.decode(errors="replace"))
+
+    # Construct full target URL
     full_url = f"{BASE_API_URL}/{subpath}"
 
     try:
@@ -33,7 +36,7 @@ def proxy(subpath):
             },
             auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
             cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-            verify=True  # Or False for testing
+            verify=True  # Use system CAs; False only for dev
         )
 
         return jsonify({
@@ -45,5 +48,6 @@ def proxy(subpath):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Run locally only (ignored in Render)
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
