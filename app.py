@@ -45,7 +45,7 @@ def proxy(subpath):
             })
 
         else:  # GET request
-            accept_header = "application/pdf" if "reportType=pdf" or if "resultType=pdf" in query_string else "application/xml"
+            accept_header = "application/pdf" if "reportType=pdf" in query_string or "resultType=pdf" in query_string else "application/xml"
             response = requests.get(
                 full_url,
                 headers={"Accept": accept_header},
@@ -54,7 +54,7 @@ def proxy(subpath):
                 verify=True
             )
 
-            if "reportType=pdf" or if "resultType=pdf" in query_string:
+            if "reportType=pdf" in query_string or "resultType=pdf" in query_string:
                 return Response(
                     response.content,
                     status=response.status_code,
