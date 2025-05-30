@@ -1,11 +1,11 @@
-import os
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, jsonify
 import requests
 from requests.auth import HTTPBasicAuth
+import os
 
 app = Flask(__name__)
 
-# Load secrets from environment
+# Load secrets from environment variables
 API_KEY = os.getenv("PROXY_API_KEY")
 BASIC_AUTH_USER = os.getenv("BASIC_AUTH_USER")
 BASIC_AUTH_PASS = os.getenv("BASIC_AUTH_PASS")
@@ -13,53 +13,50 @@ BASE_API_URL = "https://s2s.thomsonreuters.com/api"
 
 @app.route('/proxy/<path:subpath>', methods=['POST', 'GET'])
 def proxy(subpath):
-    # Validate proxy API key
+    # Validate API key
     if request.headers.get("x-api-key") != API_KEY:
         return jsonify({"error": "Unauthorized"}), 403
 
-    # Construct full endpoint URL
     full_url = f"{BASE_API_URL}/{subpath}"
     print(f"Forwarding {request.method} to {full_url}")
-
-    # Default headers
-    headers = {
-        "Accept": request.headers.get("Accept", "application/xml"),
-        "Content-Type": request.headers.get("Content-Type", "application/xml")
-    }
 
     try:
         if request.method == 'POST':
             xml_payload = request.data.strip()
+
             print("Received XML payload:\n", xml_payload.decode(errors="replace"))
 
             response = requests.post(
                 full_url,
                 data=xml_payload,
-                headers=headers,
+                headers={
+                    "Content-Type": "application/xml",
+                    "Accept": "application/xml"
+                },
                 auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
                 cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-                verify="/etc/secrets/ca.pem"
+                verify=True
             )
-
-        else:  # GET
+        else:  # GET request
             response = requests.get(
                 full_url,
-                headers=headers,
+                headers={
+                    "Accept": "application/xml"
+                },
                 auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
                 cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-                verify="/etc/secrets/ca.pem"
+                verify=True
             )
 
-        return Response(
-            response.content,
-            status=response.status_code,
-            content_type=response.headers.get("Content-Type", "application/octet-stream")
-        )
+        return jsonify({
+            "status_code": response.status_code,
+            "url": full_url,
+            "response": response.text
+        })
 
     except Exception as e:
-        print(f"Proxy error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# Only used when running locally
+# Only used if running locally
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
