@@ -1,4 +1,4 @@
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, jsonify 
 import requests
 from requests.auth import HTTPBasicAuth
 import os
@@ -20,42 +20,39 @@ def proxy(subpath):
     full_url = f"{BASE_API_URL}/{subpath}"
     print(f"Forwarding {request.method} to {full_url}")
 
-    # Extract Accept and Content-Type headers
-    accept_header = request.headers.get("Accept", "application/xml")
-    content_type = request.headers.get("Content-Type", "application/xml")
-
-    headers = {
-        "Accept": accept_header,
-        "Content-Type": content_type
-    }
-
     try:
         if request.method == 'POST':
             xml_payload = request.data.strip()
+
             print("Received XML payload:\n", xml_payload.decode(errors="replace"))
 
             response = requests.post(
                 full_url,
                 data=xml_payload,
-                headers=headers,
+                headers={
+                    "Content-Type": "application/xml",
+                    "Accept": "application/xml"
+                },
                 auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
                 cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-                verify="/etc/secrets/ca.pem"
+                verify=True
             )
         else:  # GET request
             response = requests.get(
                 full_url,
-                headers=headers,
+                headers={
+                    "Accept": "application/xml"
+                },
                 auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
                 cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-                verify="/etc/secrets/ca.pem"
+                verify=True
             )
 
-        return Response(
-            response.content,
-            status=response.status_code,
-            content_type=response.headers.get("Content-Type", "application/octet-stream")
-        )
+        return jsonify({
+            "status_code": response.status_code,
+            "url": full_url,
+            "response": response.text
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
