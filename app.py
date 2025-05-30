@@ -20,14 +20,12 @@ def proxy(subpath):
     full_url = f"{BASE_API_URL}/{subpath}"
     print(f"Forwarding {request.method} to {full_url}")
 
-    # Determine headers
-    if "reportResults" in subpath:
-        # Force PDF for report results
+    # Set headers based on method
+    if request.method == 'GET':
         accept_header = "application/pdf"
-        content_type = "application/xml"  # assuming XML payloads for POSTs still
-    else:
-        # Allow override, default to XML
-        accept_header = request.headers.get("Accept", "application/xml")
+        content_type = "application/xml"  # Optional: not usually used in GET
+    else:  # POST
+        accept_header = "application/xml"
         content_type = request.headers.get("Content-Type", "application/xml")
 
     headers = {
@@ -46,7 +44,7 @@ def proxy(subpath):
                 headers=headers,
                 auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
                 cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-                verify=True
+                verify="/etc/secrets/ca.pem"
             )
         else:  # GET request
             response = requests.get(
@@ -54,7 +52,7 @@ def proxy(subpath):
                 headers=headers,
                 auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
                 cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
-                verify=True
+                verify="/etc/secrets/ca.pem"
             )
 
         return Response(
@@ -64,6 +62,7 @@ def proxy(subpath):
         )
 
     except Exception as e:
+        print(f"Proxy error: {e}")
         return jsonify({"error": str(e)}), 500
 
 # Only used if running locally
