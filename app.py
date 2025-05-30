@@ -1,11 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 import requests
 from requests.auth import HTTPBasicAuth
 import os
 
 app = Flask(__name__)
 
-# Load secrets from environment variables
 API_KEY = os.getenv("PROXY_API_KEY")
 BASIC_AUTH_USER = os.getenv("BASIC_AUTH_USER")
 BASIC_AUTH_PASS = os.getenv("BASIC_AUTH_PASS")
@@ -16,7 +15,6 @@ def proxy(subpath):
     if request.headers.get("x-api-key") != API_KEY:
         return jsonify({"error": "Unauthorized"}), 403
 
-    # Append query string if present
     query_string = request.query_string.decode()
     full_url = f"{BASE_API_URL}/{subpath}"
     if query_string:
@@ -40,25 +38,34 @@ def proxy(subpath):
                 cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
                 verify=True
             )
-        else:
-            # Adjust Accept header for PDF if requested
-            accept_header = "application/pdf" if "reportType=pdf" in query_string else "application/xml"
+            return jsonify({
+                "status_code": response.status_code,
+                "url": full_url,
+                "response": response.text
+            })
 
+        else:  # GET request
+            accept_header = "application/pdf" if "reportType=pdf" in query_string else "application/xml"
             response = requests.get(
                 full_url,
-                headers={
-                    "Accept": accept_header
-                },
+                headers={"Accept": accept_header},
                 auth=HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASS),
                 cert=("/etc/secrets/client.crt", "/etc/secrets/client.key"),
                 verify=True
             )
 
-        return jsonify({
-            "status_code": response.status_code,
-            "url": full_url,
-            "response": response.text
-        })
+            if "reportType=pdf" in query_string:
+                return Response(
+                    response.content,
+                    status=response.status_code,
+                    content_type="application/pdf"
+                )
+            else:
+                return jsonify({
+                    "status_code": response.status_code,
+                    "url": full_url,
+                    "response": response.text
+                })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
