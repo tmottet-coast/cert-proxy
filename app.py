@@ -20,9 +20,15 @@ def proxy(subpath):
     full_url = f"{BASE_API_URL}/{subpath}"
     print(f"Forwarding {request.method} to {full_url}")
 
-    # Extract Accept and Content-Type headers
-    accept_header = request.headers.get("Accept", "application/xml")
-    content_type = request.headers.get("Content-Type", "application/xml")
+    # Determine headers
+    if "reportResults" in subpath:
+        # Force PDF for report results
+        accept_header = "application/pdf"
+        content_type = "application/xml"  # assuming XML payloads for POSTs still
+    else:
+        # Allow override, default to XML
+        accept_header = request.headers.get("Accept", "application/xml")
+        content_type = request.headers.get("Content-Type", "application/xml")
 
     headers = {
         "Accept": accept_header,
